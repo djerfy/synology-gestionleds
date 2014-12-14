@@ -1,0 +1,90 @@
+#!/bin/sh
+
+# Variables
+LOGDIR="/var/log/gestionleds"
+LOGFILE="${LOGDIR}/gestionleds.log"
+SCRIPTDIR="/var/packages/GestionLEDs"
+STATUSFILE="/var/lock/gestionleds.lock"
+
+# Vérification du dossier de log
+if [ ! -e "${LOGDIR}" ]; then 
+    mkdir -p ${LOGDIR}
+    echo -ne "Le dossier de log '${LOGDIR}' n'existe pas, il a été créé automatiquement.\n"
+fi
+
+# Vérification de l'argument passé au script
+if [ "$#" -ne "1" ]; then
+    echo -ne "[ERREUR] Aucun argument n'est passé au script.\n"
+    echo -ne "Utilisation: $0 [start|stop|status|log]\n"
+    exit 1
+fi  
+
+# Fonction StartLEDs
+StartLEDs(){
+    echo  5 > /dev/ttyS1
+    sleep 2
+    echo  4 > /dev/ttyS1
+    echo  8 > /dev/ttyS1
+    touch ${SCRIPTDIR}/enabled
+    echo -ne "ONLINE" > ${STATUSFILE}
+    echo -ne "[$(date +%d/%m/%Y) at $(date +%H:%M)] as been started\n" >> ${LOGFILE}
+}
+
+# Fonction StopLEDs
+StopLEDs(){
+    echo  5 > /dev/ttyS1
+    sleep 2
+    echo  6 > /dev/ttyS1
+    echo  7 > /dev/ttyS1
+    if [ -e "${SCRIPTDIR}/enabled" ]; then
+        rm -f ${SCRIPTDIR}/enabled
+    fi
+    echo -ne "OFFLINE" > ${STATUSFILE}
+    echo -ne "[$(date +%d/%m/%Y) at $(date +%H:%M)] as been stoped\n" >> ${LOGFILE}
+}
+
+# Fonction StatusLEDs
+StatusLEDs(){
+    if [ -e "${STATUSFILE}" ]
+        then
+            echo -ne "Les LEDs du NAS sont actuellement $(cat ${STATUSFILE})\n"
+        else
+            echo -ne "Le fichier '${STATUSFILE}' n'existe pas.\n"
+            exit 1
+    fi
+}
+
+# Fonction LogLEDs
+LogLEDs(){
+    if [ -e "${LOGFILE}" ]
+        then 
+            tail -n20 ${LOGFILE}
+            exit 0
+        else
+            echo -ne "[ERREUR] Le fichier de log '${LOGFILE}' n'existe pas.\n"
+            exit 1
+    fi
+}
+
+
+case "$1" in
+    start)
+        StartLEDs
+        ;;
+
+    stop)
+        StopLEDs
+        ;;
+
+    status)
+        StatusLEDs
+        ;;
+    log)
+        LogLEDs
+        ;;
+    *)
+        echo -ne "Usage: $0 [start|stop|status|log]\n"
+        exit 1
+        ;;
+esac
+
